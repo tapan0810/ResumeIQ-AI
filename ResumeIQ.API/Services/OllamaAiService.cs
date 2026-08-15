@@ -20,73 +20,154 @@ public class OllamaAiService : IAiService
     public async Task<ResumeAnalysisResponse> AnalyzeResumeAsync(
         string resumeText)
     {
+        if (string.IsNullOrWhiteSpace(resumeText))
+        {
+            throw new ArgumentException(
+                "Resume text cannot be empty.",
+                nameof(resumeText));
+        }
+
         var model = _configuration["Ollama:Model"] ?? "gemma3";
 
         var prompt = """
-        You are an AI resume analyzer.
+            You are an AI resume analyzer.
 
-        Analyze the following resume text.
+            Analyze the following resume.
 
-        Identify:
+            Identify:
 
-        1. Skills
-        2. Strengths
-        3. Weaknesses
-        4. Recommendations
+            1. Skills
+            2. Strengths
+            3. Weaknesses
+            4. Recommendations
 
-        Return ONLY valid JSON.
+            IMPORTANT:
+            Return ONLY valid JSON.
+            Do NOT use markdown.
+            Do NOT use code fences.
+            Do NOT include any explanation before or after the JSON.
 
-        The JSON must have exactly this structure:
+            The JSON must have exactly this structure:
 
-        {
-            "skills": [],
-            "strengths": [],
-            "weaknesses": [],
-            "recommendations": []
-        }
+            {
+                "skills": [],
+                "strengths": [],
+                "weaknesses": [],
+                "recommendations": []
+            }
 
-        Resume:
-        """ + resumeText;
+            Resume:
+            """;
+
+        prompt += Environment.NewLine;
+        prompt += resumeText;
 
         var request = new
         {
             model = model,
             prompt = prompt,
-            stream = false
+            stream = false,
+            format = "json"
         };
 
-        var response = await _httpClient.PostAsJsonAsync(
-            "/api/generate",
-            request);
+        HttpResponseMessage response;
 
-        response.EnsureSuccessStatusCode();
+        try
+        {
+            response = await _httpClient.PostAsJsonAsync(
+                "/api/generate",
+                request);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new InvalidOperationException(
+                "Unable to connect to Ollama. Make sure Ollama is running.",
+                ex);
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync();
+
+            throw new InvalidOperationException(
+                $"Ollama returned HTTP {(int)response.StatusCode}: {error}");
+        }
 
         var result = await response.Content
             .ReadFromJsonAsync<OllamaResponse>();
 
-        if (result == null || string.IsNullOrWhiteSpace(result.Response))
+        if (result == null)
         {
             throw new InvalidOperationException(
                 "Ollama returned an empty response.");
         }
 
-        var analysis = JsonSerializer.Deserialize<ResumeAnalysisResponse>(
-            result.Response,
-            new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-
-        if (analysis == null)
+        if (string.IsNullOrWhiteSpace(result.Response))
         {
             throw new InvalidOperationException(
-                "Unable to parse AI response.");
+                "Ollama returned an empty AI response.");
         }
 
-        return analysis;
+        Console.WriteLine();
+        Console.WriteLine("========== RAW OLLAMA RESPONSE ==========");
+        Console.WriteLine(result.Response);
+        Console.WriteLine("==========================================");
+        Console.WriteLine();
+
+        var cleanedResponse = CleanJsonResponse(result.Response);
+
+        try
+        {
+            var analysis =
+                JsonSerializer.Deserialize<ResumeAnalysisResponse>(
+                    cleanedResponse,
+                    new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+            if (analysis == null)
+            {
+                throw new InvalidOperationException(
+                    "AI response could not be converted to the expected format.");
+            }
+
+            return analysis;
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException(
+                "Ollama returned invalid JSON. " +
+                $"Raw response: {result.Response}",
+                ex);
+        }
     }
 
-    private class OllamaResponse
+    private static string CleanJsonResponse(string response)
+    {
+        response = response.Trim();
+
+        // Remove markdown code fence if the model still returns one.
+        if (response.StartsWith(
+                "```json",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            response = response["```json".Length..];
+        }
+        else if (response.StartsWith("```"))
+        {
+            response = response["```".Length..];
+        }
+
+        if (response.EndsWith("```"))
+        {
+            response = response[..^3];
+        }
+
+        return response.Trim();
+    }
+
+    private sealed class OllamaResponse
     {
         public string Response { get; set; } = string.Empty;
     }
