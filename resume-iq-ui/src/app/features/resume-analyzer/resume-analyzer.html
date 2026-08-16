@@ -1,0 +1,313 @@
+<div class="container py-5">
+
+  <!-- ========================================= -->
+  <!-- HEADER -->
+  <!-- ========================================= -->
+
+  <div class="text-center mb-5">
+
+    <h1 class="display-5 fw-bold">
+      ResumeIQ
+    </h1>
+
+    <p class="lead text-muted">
+      AI-powered resume analyzer
+    </p>
+
+  </div>
+
+
+  <!-- ========================================= -->
+  <!-- RESUME INPUT -->
+  <!-- ========================================= -->
+
+  <div class="card shadow-sm border-0">
+
+    <div class="card-body p-4">
+
+      <h2 class="h4 mb-2">
+        Analyze Your Resume
+      </h2>
+
+      <p class="text-muted mb-4">
+        Paste your resume below and let AI analyze
+        your skills, strengths, weaknesses and
+        improvement areas.
+      </p>
+
+
+      <!-- Resume -->
+
+      <div class="mb-3">
+
+        <label
+          for="resumeText"
+          class="form-label fw-semibold">
+
+          Resume Text
+
+        </label>
+
+        <textarea
+          id="resumeText"
+          class="form-control"
+          rows="15"
+          [(ngModel)]="resumeText"
+          placeholder="Paste your resume text here...">
+        </textarea>
+
+      </div>
+
+
+      <!-- ========================================= -->
+      <!-- ERROR -->
+      <!-- ========================================= -->
+
+      @if (errorMessage()) {
+
+        <div
+          class="alert alert-danger"
+          role="alert">
+
+          {{ errorMessage() }}
+
+        </div>
+
+      }
+
+
+      <!-- ========================================= -->
+      <!-- BUTTON -->
+      <!-- ========================================= -->
+
+      <div class="d-flex gap-2">
+
+        <button
+          type="button"
+          class="btn btn-primary"
+          [disabled]="isLoading()"
+          (click)="analyzeResume()">
+
+          @if (isLoading()) {
+
+            <span
+              class="spinner-border spinner-border-sm me-2"
+              role="status"
+              aria-hidden="true">
+            </span>
+
+            Analyzing...
+
+          } @else {
+
+            Analyze Resume
+
+          }
+
+        </button>
+
+
+        @if (analysis()) {
+
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            (click)="resetAnalysis()">
+
+            Analyze Another
+
+          </button>
+
+        }
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ========================================= -->
+  <!-- ANALYSIS RESULT -->
+  <!-- ========================================= -->
+
+  @if (analysis(); as result) {
+
+    <div class="mt-5">
+
+      <!-- Success -->
+
+      <div class="alert alert-success">
+
+        <strong>
+          AI Analysis Completed Successfully! ✅
+        </strong>
+
+      </div>
+
+
+      <!-- ========================================= -->
+      <!-- SKILLS -->
+      <!-- ========================================= -->
+
+      <div class="card shadow-sm border-0 mb-4">
+
+        <div class="card-body p-4">
+
+          <h3 class="h4 mb-3">
+            Skills
+          </h3>
+
+          <div class="d-flex flex-wrap gap-2">
+
+            @for (
+              skill of result.skills;
+              track skill
+            ) {
+
+              <span class="badge text-bg-primary p-2">
+
+                {{ skill }}
+
+              </span>
+
+            }
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- ========================================= -->
+      <!-- STRENGTHS + WEAKNESSES -->
+      <!-- ========================================= -->
+
+      <div class="row g-4 mb-4">
+
+
+        <!-- Strengths -->
+
+        <div class="col-lg-6">
+
+          <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-body p-4">
+
+              <h3 class="h4 mb-3">
+                Strengths
+              </h3>
+
+              <ul class="list-group list-group-flush">
+
+                @for (
+                  strength of result.strengths;
+                  track strength
+                ) {
+
+                  <li class="list-group-item px-0">
+
+                    <span class="text-success fw-bold me-2">
+                      ✓
+                    </span>
+
+                    {{ strength }}
+
+                  </li>
+
+                }
+
+              </ul>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- Weaknesses -->
+
+        <div class="col-lg-6">
+
+          <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-body p-4">
+
+              <h3 class="h4 mb-3">
+                Areas to Improve
+              </h3>
+
+              <ul class="list-group list-group-flush">
+
+                @for (
+                  weakness of result.weaknesses;
+                  track weakness
+                ) {
+
+                  <li class="list-group-item px-0">
+
+                    <span class="text-warning fw-bold me-2">
+                      ⚠
+                    </span>
+
+                    {{ weakness }}
+
+                  </li>
+
+                }
+
+              </ul>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- ========================================= -->
+      <!-- RECOMMENDATIONS -->
+      <!-- ========================================= -->
+
+      <div class="card shadow-sm border-0 mb-5">
+
+        <div class="card-body p-4">
+
+          <h3 class="h4 mb-3">
+            AI Recommendations
+          </h3>
+
+          <div class="list-group list-group-flush">
+
+            @for (
+              recommendation of result.recommendations;
+              track recommendation
+            ) {
+
+              <div class="list-group-item px-0">
+
+                <span class="fw-bold me-2">
+                  →
+                </span>
+
+                {{ recommendation }}
+
+              </div>
+
+            }
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  }
+
+</div>
