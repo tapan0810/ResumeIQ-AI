@@ -7,6 +7,7 @@ import { ResumeAnalysisRequest } from '../models/resume-analysis-request.model';
 
 @Injectable({
   providedIn: 'root'
+
 })
 export class ResumeService {
 
